@@ -164,6 +164,7 @@ class DistributedShampoo(torch.optim.Optimizer):
         grafting_epsilon (float): epsilon for grafting method. (Default: 1e-3)
         grafting_beta2 (float): exponential moving average factor for grafting method. (Default: 1.0)
         debug_mode (bool): debugging mode. Uses more memory to compute error to fp64 case. Must enable logging level to DEBUG. (Default: False)
+        use_dtensor (bool): Flag for using DTensor. (Default: True)
 
     """
 
@@ -191,6 +192,7 @@ class DistributedShampoo(torch.optim.Optimizer):
         grafting_epsilon: float = 1e-3,
         grafting_beta2: float = 1.0,
         debug_mode: bool = False,
+        use_dtensor: bool = True,
     ):
         # Hyperparameter checks.
         if not lr >= 0.0:
@@ -244,6 +246,10 @@ class DistributedShampoo(torch.optim.Optimizer):
 
         # Distributed checks.
         if num_gpus_per_group > 1 or num_gpus_per_group == -1:
+
+            # TODO(gallego-posada): Are there any new checks required when using
+            # `dtensor`?
+
             if not torch.cuda.is_available():
                 raise ValueError("Using distributed version of Shampoo without GPUs!")
             if not dist.is_initialized():
@@ -316,6 +322,7 @@ class DistributedShampoo(torch.optim.Optimizer):
         self._world_size = dist.get_world_size() if self._use_distributed() else 1
 
         # Initialize Shampoo preconditioners and distributed buffers.
+        self._use_dtensor = use_dtensor
         self._dist_group = None
         buffer_ranks_list = self._assign_preconditioners_to_ranks()
         self._initialize_preconditioners_and_steps(buffer_ranks_list)
@@ -326,7 +333,7 @@ class DistributedShampoo(torch.optim.Optimizer):
 
     @torch.no_grad()
     def _initialize_preconditioners_and_steps(
-        self, buffer_ranks_list: List[List[Tuple[torch.Tensor, int]]]
+        self, buffer_ranks_list: List[List[Tuple[torch.Tensor, int]]],
     ):
         """Initialize Shampoo preconditioners and inverse preconditioners."""
 
@@ -358,6 +365,7 @@ class DistributedShampoo(torch.optim.Optimizer):
                         group=self._dist_group,
                         dist_buffer_ranks=buffer_ranks,
                         dist_buffer_index=preconditioner_count,
+                        use_dtensor=self._use_dtensor,
                     )
                     preconditioner_count += len(
                         state[PRECONDITIONERS].get_split_dist_buffers()
@@ -382,6 +390,7 @@ class DistributedShampoo(torch.optim.Optimizer):
                             group=self._dist_group,
                             group_source_rank=group_source_rank,
                             dist_buffer=dist_buffer,
+                            use_dtensor=self._use_dtensor,
                         )
                         if torch.any(dims > self._max_preconditioner_dim)
                         else ShampooPreconditioner(
@@ -401,6 +410,7 @@ class DistributedShampoo(torch.optim.Optimizer):
                             group=self._dist_group,
                             group_source_rank=group_source_rank,
                             dist_buffer=dist_buffer,
+                            use_dtensor=self._use_dtensor,
                         )
                     )
 
@@ -431,6 +441,7 @@ class DistributedShampoo(torch.optim.Optimizer):
                         group=self._dist_group,
                         group_source_rank=group_source_rank,
                         dist_buffer=dist_buffer,
+                        use_dtensor=self._use_dtensor,
                     )
 
                 else:
