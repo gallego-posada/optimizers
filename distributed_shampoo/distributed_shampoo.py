@@ -17,12 +17,12 @@ from typing import Any, Dict, List, Tuple
 import torch
 import torch.distributed as dist
 
-from distributed_shampoo.shampoo_dist_utils import (
+from .shampoo_dist_utils import (
     distribute_buffer_sizes,
     split_local_dist_buffers,
 )
 
-from distributed_shampoo.shampoo_utils import (
+from .shampoo_utils import (
     AdagradPreconditioner,
     BlockShampooPreconditioner,
     DistributedPreconditioner,

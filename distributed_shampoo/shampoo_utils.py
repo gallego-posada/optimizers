@@ -16,13 +16,13 @@ from typing import List, Optional, Tuple, Union
 import torch
 import torch.distributed as dist
 
-from distributed_shampoo.matrix_functions import (
+from .matrix_functions import (
     check_diagonal,
     compute_matrix_root_inverse_residuals,
     matrix_inverse_root,
 )
-from distributed_shampoo.optimizer_modules import OptimizerModule
-from distributed_shampoo.shampoo_dist_utils import (
+from .optimizer_modules import OptimizerModule
+from .shampoo_dist_utils import (
     allocate_distributed_tensor,
     get_dtype_size,
     use_local_tensor,
